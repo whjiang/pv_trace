@@ -1,0 +1,117 @@
+//syntax = "proto2";
+package com.voop.data.cleaning.logic.mars.mobile.page;
+// [END declaration]
+
+// [START java_declaration]
+option java_package = "com.voop.data.cleaning.logic.mars.mobile.page";
+option java_outer_classname = "MobilePageProtos";
+// [END java_declaration]
+
+/*
+    注：对于数值型的字段，若解析错误，默认赋值为-999999
+    判断PB对象中属性或对象是否有值，需调用PB对象的hasXXXField()方法
+    部分字段的注释来自：http://meta.voop.voop.com/m/voopdw.dw_log_app_pageinfo_hm
+*/
+message MobilePage {
+    optional string arg_service                         					    = 1;
+    optional int64 time_local                      							    = 2;
+    optional string user_agent                      							= 3;    //客户端信息,客户端信息，包含了操作系统/浏览器版本等信息,用user agent补充app_name,app version,os等信息
+    optional string lauguage                        							= 4;
+    optional string remote_addr                     							= 5;
+    optional string x_forwarded_for                 							= 6;
+    optional string referer                         							= 7;
+    optional string nginx_status                    							= 8;
+    optional double request_time                    							= 9;
+    optional string host                        								= 10;
+    optional string host_name                       							= 11;
+    optional string api_key                       							    = 12;   //工信部的一个加密要求所附加的变更
+
+    optional string app_version                                                 = 20;   //APP版本
+    optional string app_name                                                    = 21;   //APP名称,特卖会、优物等。填应用名称（中文）。埋点的时候app_name传的是如android_shop这样的source。大数据清洗时通过voopdm.dim_log_app_name将其转换成中文的应用名
+    optional string session_id                                                  = 22;   //会话ID（SessionID），offline is startup_id,一个访次的唯一标识。打开APP90秒不活动会生成一个新的session
+    optional string mid                                                         = 23;   //设备唯一ID,设备ID（除bug外，所有唯品会APP 同一设备mid相同）iOS：OpenUDID,Android：首先使用android_id，为空取device_id，为空取randomUDID
+    optional int64 voopruid                                                      = 24;
+    optional string mars_cid                                                    = 25;
+
+    optional int64  brand_id                                                    = 41;   //档期ID,列表页和详情页都有
+    optional int64  brand_rank                                                  = 42;   //品牌所处位置,当在频道页点击进入详情页时，该档期在列表页所在位置排序
+    optional int64  goods_id                                                    = 43;   //商品ID
+    optional int64  goods_rank                                                  = 44;   //商品所处位置,当在列表页点击进入详情页时，该商品在列表页所在位置排序
+    optional int32 stock_status                                                 = 45;   //库存状态：0: 已抢光；1: 有货；2: 有机会 3：已下架  4：其他
+    optional int32 has_color                                                    = 46;   //是否有颜色选择（1是0否）
+    optional int32 sale_type                                                    = 47;   //售卖类型：1：在售商品2：预定商品
+
+    optional int64 page_start_time                                              = 71;
+    optional string warehouse                                                   = 72;   //分仓名称,用户所选分仓，包括自动选择的
+    optional string page_type                                                   = 73;   //页面埋点编码，用离线名称，解析的为page字段的值,页面类型,可通过关联voopdm.dim_log_app_page_type_config获取页面名称
+    optional string mobile_platform                                             = 74;
+    optional string user_class                                                  = 75;   //会员类别,用户分群,ABC用户分群信息，实际体现在不同user_class看到的页面是不同的。用于追踪页面。一个人由于登陆、下单的行为，一天会有多个user_class。
+    optional string page_param                                                  = 76;   //页面埋点参数，解析的page_propety字段,页面属性,即采集时的page_propety
+    optional string channel                                                     = 77;   //站点ID，offline is site_id
+    optional string parent_page                                                 = 78;   //上一页页面编码，offline is refer_page_type
+    optional int64 api_end_time                                                 = 79;
+    optional int64 page_leave_time                                              = 80;
+    optional int32  status                                                      = 81;
+    optional string status_descrit                                              = 82;
+    optional int32 new_coustomer                                                = 83;   //是否新客（cookie）
+    optional string ip                                                          = 84;   //用户IP,用户访问APP时的IP
+    optional int64 triggertime                                                  = 85;
+    optional int64 page_loaded_time                                             = 86;
+    optional int64  stay_time                                                   = 87;
+    optional string area_name                                                   = 88;   //用户所在城市
+    optional string app_name_cn                                                 = 89;   //应用名称（中文）
+    optional string location                                                    = 90;
+    optional string user_group                                                  = 91;   //ABT用户分组
+    optional string page_origin                                                 = 92;   //本页来源,页面点击模块来源,当相同目标页，在当前页有多个入口时，用来区分入口来源。比如最新上线页同一个档期，既在广告，也在档期列表中有，PV中会记录为两个不同的page_origin
+    optional string tab_page_id                                                 = 93;   //取url中的page_id属性,PV唯一标识
+    optional string log_id                                                      = 94;   //日志ID,SESSION_ID+PAGE_ID唯一区分每一条日志的标识，后续需要用到
+    optional string userid                                                      = 95;   //用户账号,offline is user_name
+    optional string app_platform                                                = 96;   //APP平台,指应用本身对应的平台android|iphone|ipad|adpad|winphone
+    optional string wap_id                                                      = 97;   //专题、活动ID
+    optional string area_country                                                = 98;   //国家(IP解析)
+    optional string area_prov                                                   = 99;   //省份(IP解析)
+    optional string area_city                                                   = 100;  //城市(IP解析)
+    optional int64  area_id                                                     = 101;  //地区ID(IP解析)
+    optional string user_label                                                  = 102;  //CDI用户标签
+    optional string source_from_origin                                          = 103;  //归因参数，原始source_from字段信息
+    optional SourceFrom source_from                                             = 104;  //归因参数，对象，当日志中值为-99时，hasSourceFrom()方法返回false
+    optional string deeplink_cps                                                = 105;
+    optional string other_cps                                                   = 106;
+    optional string mobile_channel                                              = 107;
+    optional string standby_id                                                  = 108;
+    optional int64 page_id                                                      = 109;  //销售归因需要计算的page_id,页面ID
+}
+
+
+/*
+    归因参数
+    参考wiki:http://wiki.corp.voopshop.com/pages/viewpage.action?pageId=70491272
+*/
+message SourceFrom {
+    optional string start                           = 1;    //归因类型(start)，1：频道（包括即将上线） / 2：分类 / 3：品牌检索  /  4：收藏  / 5：购物车 / 6：个人中心 /  7：频道广告弹框  /  8：push等消息弹框 / 9:搜索/ 10： 倒计时购物车和常驻购物车模块  / -99：其他
+    optional string channel_id                      = 2;    //如果归因类型是频道，则填为频道id(channel_id)，频道唯一标识（menu_id字段），其他归因类型可以不用填，或填 -99, 参考埋点：page_channel ，属性字段：menu_code
+    optional string origin_channel_id               = 3;    //原来的channel_id字段,参考埋点：active_te_home_operation_click，属性字段：channel_id
+    optional string tshift                          = 4;    //原来的tshift字段，参考埋点：active_te_home_operation_click，属性字段：tsift
+    optional string channel_name                    = 5;    //如果归因类型是频道，则填为频道名称（在APP上显示的名称,channel_name），其他归因类型可以不用填，或填 -99, 参考埋点：page_channel ，属性字段：channel_name
+    optional string wap_id                          = 6;    //如果频道配置的是H5页面，则需要带上H5页面的wap_id，原生频道和其他归因类型可以不用填，或填 -99; 参考埋点：page_channel ，属性字段：wapid
+    optional string start_from                      = 7;    //页面入口来源(start_from)，频道：  1：TAB频道  /  2：左侧频道 / 9：运营位入口 /13：Push落地页运营浮层
+    //   收藏：  3：个人中心  /   4：左侧栏   /   5：底部浮层 / 8：商品详情页 / 13. 频道页运营位
+    //   购物车：  6：商品详情页去购物车
+    //   个人中心： 7： 订单详情页
+    //   搜索：  10. 分类页面搜索框  11  在售品牌搜索框  12.分类商品列表搜索框
+    //   其他归因类型可以不用填，或填 -99
+    optional string origin_type                     = 8;    //资源类型(origin_type)，频道：1：广告位 /  2：运营位 /  3：banner / 4：首页弹框 / 5：push等消息弹框
+    //   分类： 9   --此处变动0203修改
+    //   品牌检索： 4：旗舰店  /  5：品牌列表；
+    //   收藏：  6：品牌收藏   /  7：商品收藏   /   8：浏览记录 /  15：我的关注
+    //   购物车：10：倒计时购物车，11：历史常驻购物车 ，12：凑单列表页，13：购物车预约，16：使用礼券
+    //   搜索：14：搜索
+    //   其他归因类型可以不用填，或填 -99
+    optional string sub_type                        = 9;     //资源子类型(sub_type)，1：正常运营位 ，2：档期运营位，3：滑动运营位，4：推荐运营位，5:主题购运营位，6：搭单模块运营位，10：个性化推荐-99：其他（无法识别）
+    //   商品收藏：  7：商品收藏模块，8：有货提醒模块 9：找相似
+    optional string origin_id                       = 10;    //资源位id(origin_id)，归因类型为频道时，广告：广告ID，运营位：运营位ID，滑动运营位：运营位code，banner：档期时填brand_id，专题时填special_id，分类填二级分类id，直播间填channel_id，主题购填theme_id
+    //   广告id参考：active_te_advclick，字段：ad_id ,  运营位id参考：active_te_home_operation_click，字段：opz_id
+    optional string target_type                     = 11;    //跳转目标类型(target_type)， 1：H5专题或活动  /  2：档期（商品列表）  /   3：商品详情  /  4：美妆精选  /  5：分类商品列表页 / 6：分类档期聚类列表页 / 7：预热商品列表页/ 8：主题购落地页 /9：视频直播间/10：个性化运营位 / -99：其他
+    optional string target_id                       = 12;    //跳转目标ID(target_id)，专题活动则位wap_id，档期则为档期ID，商品详情则位商品id，分类商品列表则为二级分类id，预热档期则为档期id，分类则为二级分类id，个性化运营位则为group_id，其他填为 -99，美妆精选填 -99
+    optional string tag                             = 13;    //专题传过来的
+}
