@@ -24,6 +24,17 @@
     <protobuf.version>2.5.0</protobuf.version>
   </properties>
 
+    <repositories>
+        <repository>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+            <id>bintray-manuzhang-maven</id>
+            <name>bintray</name>
+            <url>http://dl.bintray.com/manuzhang/maven</url>
+        </repository>
+    </repositories>
+
   <dependencies>
     <dependency>
       <groupId>org.scala-lang</groupId>
@@ -32,19 +43,14 @@
     </dependency>
     <dependency>
 	    <groupId>org.apache.flink</groupId>
-	    <artifactId>flink-scala_2.10</artifactId>
-	    <version>${flink.version}</version>
+	    <artifactId>flink-streaming-java-custom_2.10</artifactId>
+	    <version>1.2</version>
     </dependency>
     <dependency>
 	    <groupId>org.apache.flink</groupId>
-	    <artifactId>flink-streaming-scala_2.10</artifactId>
-	    <version>${flink.version}</version>
+	    <artifactId>flink-streaming-scala-custom_2.10</artifactId>
+	    <version>1.2</version>
     </dependency>
-    <dependency>
-	    <groupId>org.apache.flink</groupId>
-	    <artifactId>flink-clients_2.10</artifactId>
-	    <version>${flink.version}</version>
-    </dependency>    
 
     <dependency>
 	    <groupId>com.google.protobuf</groupId>
