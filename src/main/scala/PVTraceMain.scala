@@ -3,7 +3,7 @@ import org.apache.flink.streaming.api.scala._
 import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.api.java.utils.ParameterTool
 import org.apache.flink.streaming.connectors.kafka.{FlinkKafkaConsumer08, FlinkKafkaProducer08}
-
+import scala.collection.JavaConversions._
 
 object PVTraceMain {
   def main(args: Array[String]): Unit = {
@@ -19,19 +19,23 @@ object PVTraceMain {
     // generate a Watermark every second
     env.getConfig.setAutoWatermarkInterval(1000)
 
+    val fullProp = new Properties()
+    val in = getClass().getResourceAsStream("foo.properties")
+    fullProp.load(in)
+    in.close()
+
     // configure Kafka consumer
-    val props = new Properties()
-    props.setProperty("zookeeper.connect", "localhost:2181") // Zookeeper default host:port
-    props.setProperty("bootstrap.servers", "localhost:9092") // Broker default host:port
-    props.setProperty("group.id", "myGroup")                 // Consumer group ID
-    props.setProperty("auto.offset.reset", "earliest")       // Always read topic from start
+    val inProps = new Properties()
+    fullProp.stringPropertyNames().filter(_.startsWith("source.")).foreach { key =>
+      inProps.put(key.substring("source.".length), fullProp.getProperty(key))
+    }
 
     // create a Kafka consumer
     val kafkaConsumer =
       new FlinkKafkaConsumer08(
-        "mars-sc-mobile-page-logger-clean",
+        inProps.getProperty("topic_name"),
         new AppPVSchema(),
-        props)
+        inProps)
 
     // create Kafka consumer data source
     val pvInput = env.addSource(kafkaConsumer)
@@ -40,8 +44,8 @@ object PVTraceMain {
     val outputStream = pvTrace.genPVTrace(pvInput)
 
     outputStream.addSink(new FlinkKafkaProducer08[UserPVTraceLog](
-      "localhost:9092",      // Kafka broker host:port
-      "cleansedRides",       // Topic to write to
+      fullProp.getProperty("dest.bootstrap.servers"),      // Kafka broker host:port
+      fullProp.getProperty("dest.topic_name"),       // Topic to write to
       new UserPVLogSchema())
     );
     env.execute("PageView")
