@@ -51,7 +51,16 @@
 	    <artifactId>flink-streaming-scala-custom_2.10</artifactId>
 	    <version>1.2</version>
     </dependency>
-
+    <dependency>
+	    <groupId>org.apache.flink</groupId>
+	    <artifactId>flink-clients_2.10</artifactId>
+	    <version>${flink.version}</version>
+    </dependency>    
+    <dependency>
+	    <groupId>org.apache.flink</groupId>
+	    <artifactId>flink-connector-kafka-0.8_2.10</artifactId>
+	    <version>${flink.version}</version>
+    </dependency>
     <dependency>
 	    <groupId>com.google.protobuf</groupId>
 	    <artifactId>protobuf-java</artifactId>
@@ -135,6 +144,7 @@
 				    <configuration>
 					    <sources>
 						    <source>${basedir}/target/generated-sources</source>
+						    <source>src/main/java</source>
 					    </sources>
 				    </configuration>
 			    </execution>
