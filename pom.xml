@@ -49,13 +49,14 @@
     <dependency>
 	    <groupId>org.apache.flink</groupId>
 	    <artifactId>flink-streaming-scala-custom_2.10</artifactId>
+        <exclusions>
+            <exclusion>
+                <groupId>org.apache.flink</groupId>
+                <artifactId>flink-streaming-java_2.10</artifactId>
+            </exclusion>
+        </exclusions>
 	    <version>1.2</version>
     </dependency>
-    <dependency>
-	    <groupId>org.apache.flink</groupId>
-	    <artifactId>flink-clients_2.10</artifactId>
-	    <version>${flink.version}</version>
-    </dependency>    
     <dependency>
 	    <groupId>org.apache.flink</groupId>
 	    <artifactId>flink-connector-kafka-0.8_2.10</artifactId>
@@ -66,11 +67,7 @@
 	    <artifactId>protobuf-java</artifactId>
 	    <version>${protobuf.version}</version>
     </dependency>
-    <dependency>
-	    <groupId>org.apache.flink</groupId>
-	    <artifactId>flink-connector-kafka</artifactId>
-	    <version>0.9.1</version>
-    </dependency>
+
     <!-- Test -->
     <dependency>
 	    <groupId>junit</groupId>
