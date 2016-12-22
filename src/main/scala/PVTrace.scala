@@ -37,4 +37,3 @@ class SortAndEmitFn extends ProcessWindowFunction[MobilePage, UserPVTraceLog, St
   }
 }
 
-case class UserPVTraceLog(userId: String, parent: Int, current: MobilePage)
