@@ -1,0 +1,19 @@
+import "mars_mobile_page.proto";
+//syntax = "proto2";
+package com.voop.data.cleaning.logic.mars.mobile.page;
+// [END declaration]
+
+// [START java_declaration]
+option java_package = "com.voop.data.cleaning.logic.mars.mobile.page";
+option java_outer_classname = "MobilePageTraceProtos";
+// [END java_declaration]
+
+message MobilePageWithTrace {
+  optional MobilePage  pv = 1;
+
+  optional string sessionId = 2;
+  optional int64  pageIndex = 3;
+  optional bool   firstPage = 4;
+  optional bool   lastPage  = 5;
+  optional int64  level     = 6;
+}

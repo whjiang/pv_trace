@@ -80,6 +80,8 @@ message MobilePage {
     optional string mobile_channel                                              = 107;
     optional string standby_id                                                  = 108;
     optional int64 page_id                                                      = 109;  //销售归因需要计算的page_id,页面ID
+
+    extensions 300 to 3000;
 }
 
 

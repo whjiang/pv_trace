@@ -1,8 +1,12 @@
 import java.util.Properties
+
+import com.voop.data.cleaning.logic.mars.mobile.page.MobilePageProtos.MobilePage
+import com.voop.data.cleaning.logic.mars.mobile.page.MobilePageTraceProtos.MobilePageWithTrace
 import org.apache.flink.streaming.api.scala._
 import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.api.java.utils.ParameterTool
 import org.apache.flink.streaming.connectors.kafka.{FlinkKafkaConsumer08, FlinkKafkaProducer08}
+
 import scala.collection.JavaConversions._
 
 object PVTraceMain {
@@ -40,14 +44,19 @@ object PVTraceMain {
     // create Kafka consumer data source
     val pvInput = env.addSource(kafkaConsumer)
 
-    val pvTrace = new PVTrace()
-    val outputStream = pvTrace.genPVTrace(pvInput)
+    // assign timestamp and watermark
+    val withTimestampsAndWatermarks: DataStream[MobilePage] = pvInput
+      .assignTimestampsAndWatermarks(new PVTimestampAndWatermarkGenerator())
 
-    outputStream.addSink(new FlinkKafkaProducer08[UserPVTraceLog](
+    val pvTrace = new PVTrace()
+    val outputStream = pvTrace.genPVTrace(withTimestampsAndWatermarks)
+
+    outputStream.addSink(new FlinkKafkaProducer08[MobilePageWithTrace](
       fullProp.getProperty("dest.bootstrap.servers"),      // Kafka broker host:port
       fullProp.getProperty("dest.topic_name"),       // Topic to write to
-      new UserPVLogSchema())
-    );
-    env.execute("PageView")
+      new MobilePageTraceSchema())
+    )
+
+    env.execute("PV_Trace")
   }
 }
