@@ -6,6 +6,7 @@ import org.apache.flink.streaming.api.windowing.windows.TimeWindow
 import org.apache.flink.util.Collector
 import com.voop.data.cleaning.logic.mars.mobile.page.MobilePageProtos.MobilePage
 import com.voop.data.cleaning.logic.mars.mobile.page.MobilePageTraceProtos.MobilePageWithTrace
+import org.apache.flink.api.common.functions.{MapFunction, RichMapFunction}
 import org.apache.flink.streaming.api.scala.function.ProcessWindowFunction
 import org.apache.flink.streaming.api.windowing.time.Time
 
@@ -15,12 +16,23 @@ import org.apache.flink.streaming.api.windowing.time.Time
   */
 class PVTrace {
   def genPVTrace(dataStream: DataStream[MobilePage]): DataStream[MobilePageWithTrace] = {
-    dataStream
+
+    //sort PVs for each user by its user id and watermark
+    val sortedStream = dataStream
       .keyBy(_.getUserid)
-      .window(EventTimeSessionWindows.withGap(Time.minutes(60)))
-      .trigger(ContinuousProcessingTimeTrigger.of(Time.seconds(5)))
+      .timeWindow(Time.seconds(5))
       .apply(new SortAndEmitFn)
 
+    sortedStream
+      .keyBy(_.getPv.getUserid)
+      .map(new AssignSessionAndTraceFn)
+  }
+}
+
+class AssignSessionAndTraceFn extends MapFunction[MobilePageWithTrace, MobilePageWithTrace] {
+  override def map(in: MobilePageWithTrace): MobilePageWithTrace = {
+    in
+    //TODO: assign session and trace info
   }
 }
 
@@ -42,4 +54,5 @@ class SortAndEmitFn extends ProcessWindowFunction[MobilePage, MobilePageWithTrac
     mobilePage.getPageStartTime
   }
 }
+
 
