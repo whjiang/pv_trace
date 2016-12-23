@@ -15,9 +15,7 @@ class PVTimestampAndWatermarkGenerator extends AssignerWithPeriodicWatermarks[Mo
   var currentMaxTimestamp: Long = 0
 
   override def extractTimestamp(element: MobilePage, previousElementTimestamp: Long): Long = {
-    //if event time bigger than system time, use system time instead
-    //event time is set at mobile side, which may be inaccurate
-    val timestamp = min(element.getTimeLocal, System.currentTimeMillis)
+    val timestamp = PVTimestampExactor.extractTimestamp(element)
     currentMaxTimestamp = max(timestamp, currentMaxTimestamp)
     timestamp
   }

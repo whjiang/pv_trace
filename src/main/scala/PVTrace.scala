@@ -24,35 +24,29 @@ class PVTrace {
       .apply(new SortAndEmitFn)
 
     sortedStream
-      .keyBy(_.getPv.getUserid)
-      .map(new AssignSessionAndTraceFn)
+      .keyBy(_.getUserid)
+        .mapWithState { (pv: MobilePage, state: Option[PVState]) =>
+          val curState = state.getOrElse(PVState(null, 0, 0))
+
+          //TODO: assign session and trace
+          val pvTraceBuilder = MobilePageWithTrace.newBuilder()
+          pvTraceBuilder.setPv(pv)
+          (pvTraceBuilder.build(), Some(curState))
+        }
   }
 }
 
-class AssignSessionAndTraceFn extends MapFunction[MobilePageWithTrace, MobilePageWithTrace] {
-  override def map(in: MobilePageWithTrace): MobilePageWithTrace = {
-    in
-    //TODO: assign session and trace info
-  }
-}
-
-class SortAndEmitFn extends ProcessWindowFunction[MobilePage, MobilePageWithTrace, String, TimeWindow] {
+class SortAndEmitFn extends ProcessWindowFunction[MobilePage, MobilePage, String, TimeWindow] {
 
   override def process(userId: String, input: Iterable[MobilePage],
                        context: Context,
-                       out: Collector[MobilePageWithTrace]): Unit = {
-    val trajectory = input.filter(getEventTime(_) <= context.watermark).toList.sortBy(getEventTime)
-    trajectory.foreach { pv =>
-      val builder = MobilePageWithTrace.newBuilder()
-      builder.setPv(pv)
-      out.collect(builder.build())
-    }
+                       out: Collector[MobilePage]): Unit = {
+//    val pvList = input.filter(PVTimestampExactor.extractTimestamp(_) <= context.watermark)
+    val pvList = input
+    pvList.toList.sortBy(PVTimestampExactor.extractTimestamp)
 
-  }
-
-  private def getEventTime(mobilePage: MobilePage): Long = {
-    mobilePage.getPageStartTime
+    pvList.foreach(pv => out.collect(pv))
   }
 }
 
-
+case class PVState(sessionId: String, index: Long, curLevel: Int)

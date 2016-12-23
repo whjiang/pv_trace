@@ -24,7 +24,7 @@ object PVTraceMain {
     env.getConfig.setAutoWatermarkInterval(1000)
 
     val fullProp = new Properties()
-    val in = getClass().getResourceAsStream("foo.properties")
+    val in = getClass().getResourceAsStream("pv_trace.properties")
     fullProp.load(in)
     in.close()
 
