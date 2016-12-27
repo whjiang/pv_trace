@@ -4,7 +4,6 @@ import org.apache.flink.streaming.api.windowing.windows.TimeWindow
 import org.apache.flink.util.Collector
 import com.voop.data.cleaning.logic.mars.mobile.page.MobilePageProtos.MobilePage
 import com.voop.data.cleaning.logic.mars.mobile.page.MobilePageTraceProtos.MobilePageWithTrace
-import org.apache.flink.api.common.functions.{MapFunction, RichMapFunction}
 import org.apache.flink.streaming.api.scala.function.ProcessWindowFunction
 import org.apache.flink.streaming.api.windowing.time.Time
 import org.apache.flink.streaming.api.functions.co.RichCoFlatMapFunction
@@ -12,7 +11,6 @@ import java.util.Stack
 
 import org.apache.flink.api.common.state.ValueStateDescriptor
 import org.apache.flink.api.common.typeinfo.TypeInformation
-import org.apache.flink.api.common.typeutils.base.StringSerializer
 import org.apache.flink.streaming.api.windowing.assigners.EventTimeSessionWindows
 
 /**
@@ -36,24 +34,46 @@ class PVTrace {
         .flatMap(new SessionFn)
 
     //assign path id and trace, this is mid/cookie_id based
-    refSortedStream.keyBy(_.getPv.getMid)
-        .mapWithState { (pv: MobilePageWithTrace, state: Option[PVState]) =>
-          //previous state
-          val curState = state.getOrElse(PVState(0, 0, 0, null))
-          var pathId = curState.pathId
-          val stack = Option(curState.stack).getOrElse(new Stack[MobilePageWithTrace])
+    val sessionEndNotificationStream2 = refSortedStream.map(pv => SessionHelper(pv.getPv.getMid, pv.getPv.getPageStartTime))
+      .keyBy(_.key).window(EventTimeSessionWindows.withGap(Time.hours(1))).max("time")
 
-          if(pv.getReferPageId==0) {
-            pathId += pathId + 1
-            if(stack.empty()) {
-              pathId = 0
-            }
-          }
-          val index = 0
-          val curLevel = 0
-          val newState = PVState(pathId, index, curLevel, stack)
-          (pv, Some(newState))
-        }
+    refSortedStream.connect(sessionEndNotificationStream2).keyBy(_.getPv.getMid, _.key)
+          .flatMap(new TraceFn)
+  }
+}
+
+class TraceFn extends RichCoFlatMapFunction[MobilePageWithTrace, SessionHelper, MobilePageWithTrace] {
+  private val serialVersionUID: Long = 1L
+  private val pvStateTI: TypeInformation[PVState] = createTypeInformation[PVState]
+  private val state: ValueStateDescriptor[PVState] =
+    new ValueStateDescriptor[PVState]("page_trace", pvStateTI, null)
+
+  override def flatMap2(in2: SessionHelper, collector: Collector[MobilePageWithTrace]): Unit = {
+    val valueState = getRuntimeContext.getState(state)
+    //remove state
+    valueState.update(null)
+  }
+
+  override def flatMap1(pv: MobilePageWithTrace, collector: Collector[MobilePageWithTrace]): Unit = {
+    val valueState = getRuntimeContext.getState(state)
+    val stateOption = Option(valueState.value())
+    val curState = stateOption.getOrElse(PVState(0, 0, 0, null))
+    var pathId = curState.pathId
+    val stack = Option(curState.stack).getOrElse(new Stack[MobilePageWithTrace])
+
+    if(pv.getReferPageId==0) {
+      pathId += pathId + 1
+      if(stack.empty()) {
+        pathId = 0
+      }
+    }
+    val index = 0
+    val curLevel = 0
+
+    collector.collect(pv)
+
+    val newState = PVState(pathId, index, curLevel, stack)
+    valueState.update(newState)
   }
 }
 
