@@ -7,7 +7,13 @@ import com.voop.data.cleaning.logic.mars.mobile.page.MobilePageTraceProtos.Mobil
 import org.apache.flink.api.common.functions.{MapFunction, RichMapFunction}
 import org.apache.flink.streaming.api.scala.function.ProcessWindowFunction
 import org.apache.flink.streaming.api.windowing.time.Time
+import org.apache.flink.streaming.api.functions.co.RichCoFlatMapFunction
 import java.util.Stack
+
+import org.apache.flink.api.common.state.ValueStateDescriptor
+import org.apache.flink.api.common.typeinfo.TypeInformation
+import org.apache.flink.api.common.typeutils.base.StringSerializer
+import org.apache.flink.streaming.api.windowing.assigners.EventTimeSessionWindows
 
 /**
   * main handling logic
@@ -21,23 +27,13 @@ class PVTrace {
       .apply(new SortAndEmitFn)
 
     //assign ref_page_id related info as it is session based instead of mid based
-    //TODO: remove states
-    val refSortedStream: DataStream[MobilePageWithTrace] = dataStream.keyBy(pv => pv.getMid+pv.getSessionId)
-      .mapWithState { (pv: MobilePage, state: Option[RefPVSesionState]) =>
-        val curState = state.getOrElse(RefPVSesionState(0, "", "", ""))
-        //assign ref_page_id related info
-        val pvTraceBuilder = MobilePageWithTrace.newBuilder()
-        pvTraceBuilder.setPv(pv)
+    //this session is used to remove state in future time
+    val sessionEndNotificationStream = sortedStream.map(pv => SessionHelper(pv.getMid+pv.getSessionId, pv.getPageStartTime))
+            .keyBy(_.key).window(EventTimeSessionWindows.withGap(Time.hours(1))).max("time")
 
-        pvTraceBuilder.setIsLandingPage(state.isEmpty)
-        pvTraceBuilder.setReferPageId(curState.refPageId)
-        pvTraceBuilder.setReferPageParam(curState.refPageParam)
-        pvTraceBuilder.setReferPageType(curState.refPageType)
-        pvTraceBuilder.setReferTabPageId(curState.refTabPageId)
-
-        val newState = RefPVSesionState(pv.getPageId, pv.getPageType, pv.getPageParam, pv.getTabPageId)
-        (pvTraceBuilder.build(), Some(newState))
-      }
+    val refSortedStream = sortedStream.connect(sessionEndNotificationStream)
+      .keyBy((pv => pv.getMid+pv.getSessionId), (sh => sh.key))
+        .flatMap(new SessionFn)
 
     //assign path id and trace, this is mid/cookie_id based
     refSortedStream.keyBy(_.getPv.getMid)
@@ -61,6 +57,38 @@ class PVTrace {
   }
 }
 
+class SessionFn extends RichCoFlatMapFunction[MobilePage, SessionHelper, MobilePageWithTrace] {
+  private val serialVersionUID: Long = 1L
+  private val refPVSesionStateTI: TypeInformation[RefPVSesionState] = createTypeInformation[RefPVSesionState]
+  private val state: ValueStateDescriptor[RefPVSesionState] =
+    new ValueStateDescriptor[RefPVSesionState]("ref_page_state", refPVSesionStateTI, null)
+
+  override def flatMap2(in2: SessionHelper, collector: Collector[MobilePageWithTrace]): Unit = {
+    val valueState = getRuntimeContext.getState(state)
+    //remove state
+    valueState.update(null)
+  }
+
+  override def flatMap1(pv: MobilePage, collector: Collector[MobilePageWithTrace]): Unit = {
+    val valueState = getRuntimeContext.getState(state)
+    val stateOption = Option(valueState.value())
+    val curState = stateOption.getOrElse(RefPVSesionState(0, "", "", ""))
+    //assign ref_page_id related info
+    val pvTraceBuilder = MobilePageWithTrace.newBuilder()
+    pvTraceBuilder.setPv(pv)
+
+    pvTraceBuilder.setIsLandingPage(stateOption.isEmpty)
+    pvTraceBuilder.setReferPageId(curState.refPageId)
+    pvTraceBuilder.setReferPageParam(curState.refPageParam)
+    pvTraceBuilder.setReferPageType(curState.refPageType)
+    pvTraceBuilder.setReferTabPageId(curState.refTabPageId)
+    collector.collect(pvTraceBuilder.build())
+
+    val newState = RefPVSesionState(pv.getPageId, pv.getPageType, pv.getPageParam, pv.getTabPageId)
+    valueState.update(newState)
+  }
+}
+
 class SortAndEmitFn extends ProcessWindowFunction[MobilePage, MobilePage, String, TimeWindow] {
 
   override def process(userId: String, input: Iterable[MobilePage],
@@ -77,3 +105,5 @@ class SortAndEmitFn extends ProcessWindowFunction[MobilePage, MobilePage, String
 case class RefPVSesionState(refPageId: Long, refPageType: String, refPageParam: String, refTabPageId: String)
 
 case class PVState(pathId: Long, index: Long, curLevel: Int, stack: Stack[MobilePageWithTrace] )
+
+case class SessionHelper(key: String, time: Long)
