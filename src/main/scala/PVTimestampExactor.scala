@@ -10,6 +10,6 @@ object PVTimestampExactor {
   def extractTimestamp(pv: MobilePage): Long = {
     //if event time bigger than system time, use system time instead
     //event time is set at mobile side, which may be inaccurate
-    min(pv.getTimeLocal, System.currentTimeMillis)
+    min(pv.getPageStartTime, System.currentTimeMillis)
   }
 }

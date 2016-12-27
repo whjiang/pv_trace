@@ -11,7 +11,13 @@ option java_outer_classname = "MobilePageTraceProtos";
 message MobilePageWithTrace {
   optional MobilePage  pv = 1;
 
-  optional string sessionId = 2;
-  optional int64  pageIndex = 3;
-  optional int64  level     = 4;
+  optional int64  refer_page_id = 3;
+  optional string refer_page_type = 4;
+  optional string refer_page_param = 5;
+  optional string refer_tab_page_id = 6;
+  optional bool  is_landing_page = 7;
+
+  optional int64  path_id = 9;
+  optional int64  page_index = 10;
+  optional int64  depth     = 11;
 }

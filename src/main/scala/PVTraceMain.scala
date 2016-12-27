@@ -48,8 +48,12 @@ object PVTraceMain {
     val withTimestampsAndWatermarks: DataStream[MobilePage] = pvInput
       .assignTimestampsAndWatermarks(new PVTimestampAndWatermarkGenerator())
 
+    val inputStream = withTimestampsAndWatermarks.filter { pv =>
+      pv.getAppName.equals("特卖会") && !BLACK_MID_LIST.contains(pv.getMid) && !pv.getMid.isEmpty
+    }
+
     val pvTrace = new PVTrace()
-    val outputStream = pvTrace.genPVTrace(withTimestampsAndWatermarks)
+    val outputStream = pvTrace.genPVTrace(inputStream)
 
     outputStream.addSink(new FlinkKafkaProducer08[MobilePageWithTrace](
       fullProp.getProperty("dest.bootstrap.servers"),      // Kafka broker host:port
@@ -59,4 +63,6 @@ object PVTraceMain {
 
     env.execute("PV_Trace")
   }
+
+  val BLACK_MID_LIST = List("a212622d-5e48-3ec8-bbb8-28992525091a","5b59d63b-8b6a-3b7f-a8f4-b033b0fd8374")
 }
