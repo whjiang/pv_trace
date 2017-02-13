@@ -1,10 +1,11 @@
 import java.util.Properties
 
 import com.voop.data.cleaning.logic.mars.mobile.page.MobilePageProtos.MobilePage
-import com.voop.data.cleaning.logic.mars.mobile.page.MobilePageTraceProtos.MobilePageWithTrace
+import com.voop.data.cleaning.logic.mars.mobile.page.MobilePageTraceProtos.MobilePageTrace
 import org.apache.flink.streaming.api.scala._
 import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.api.java.utils.ParameterTool
+import org.apache.flink.streaming.api.environment.CheckpointConfig
 import org.apache.flink.streaming.connectors.kafka.{FlinkKafkaConsumer08, FlinkKafkaProducer08}
 
 import scala.collection.JavaConversions._
@@ -22,6 +23,7 @@ object PVTraceMain {
     env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
     // generate a Watermark every second
     env.getConfig.setAutoWatermarkInterval(1000)
+    env.getCheckpointConfig.enableExternalizedCheckpoints(CheckpointConfig.ExternalizedCheckpointCleanup.RETAIN_ON_CANCELLATION)
 
     val fullProp = new Properties()
     val in = getClass().getResourceAsStream("pv_trace.properties")
@@ -53,13 +55,19 @@ object PVTraceMain {
     }
 
     val pvTrace = new PVTrace()
-    val outputStream = pvTrace.genPVTrace(inputStream)
+    val sessionStream = pvTrace.genPVSession(inputStream)
+    val outputStream = pvTrace.genPVTrace(sessionStream)
 
-    outputStream.addSink(new FlinkKafkaProducer08[MobilePageWithTrace](
+    val kafkaSink = new FlinkKafkaProducer08[MobilePageTrace](
       fullProp.getProperty("dest.bootstrap.servers"),      // Kafka broker host:port
       fullProp.getProperty("dest.topic_name"),       // Topic to write to
       new MobilePageTraceSchema())
-    )
+
+    // the following is necessary for at-least-once delivery guarantee
+    kafkaSink.setLogFailuresOnly(false);   // "false" by default
+    kafkaSink.setFlushOnCheckpoint(true);  // "false" by default
+
+    outputStream.addSink(kafkaSink)
 
     env.execute("PV_Trace")
   }

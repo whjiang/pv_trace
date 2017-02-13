@@ -1,0 +1,19 @@
+import "mars_mobile_page.proto";
+//syntax = "proto2";
+package com.voop.data.cleaning.logic.mars.mobile.page;
+// [END declaration]
+
+// [START java_declaration]
+option java_package = "com.voop.data.cleaning.logic.mars.mobile.page";
+option java_outer_classname = "MobilePageSessionProtos";
+// [END java_declaration]
+
+message MobilePageWithSession {
+  optional MobilePage  pv = 1;
+
+  optional int64  refer_page_id = 3;
+  optional string refer_page_type = 4;
+  optional string refer_page_param = 5;
+  optional string refer_tab_page_id = 6;
+  optional bool  is_landing_page = 7;
+}

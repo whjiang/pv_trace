@@ -8,16 +8,24 @@ option java_package = "com.voop.data.cleaning.logic.mars.mobile.page";
 option java_outer_classname = "MobilePageTraceProtos";
 // [END java_declaration]
 
-message MobilePageWithTrace {
-  optional MobilePage  pv = 1;
-
-  optional int64  refer_page_id = 3;
-  optional string refer_page_type = 4;
-  optional string refer_page_param = 5;
-  optional string refer_tab_page_id = 6;
-  optional bool  is_landing_page = 7;
-
-  optional int64  path_id = 9;
-  optional int64  page_index = 10;
-  optional int64  depth     = 11;
+message MobilePageTrace {
+  optional string dim_fst_source = 1;
+  optional string dim_sec_source = 2;
+  optional string dim_thr_source = 3;
+  optional string mid = 4;
+  optional int64 path_id = 5;
+  optional int64 path_path_no = 6;
+  optional int64 session_id = 7;
+  optional int64 start_time = 8;
+  optional int64 page_id = 9;
+  optional string page_param = 10;
+  optional bool  is_landing_page = 11;
+  optional string page_type = 12;
+  optional int64 brand_id = 13;
+  optional int64 goods_id = 14;
+  optional string activity_name = 15;
+  optional string page_origin = 16;
+  optional string tab_page_id = 17;
+  optional string source_from = 18;
+  optional string app_version = 19;
 }
