@@ -9,7 +9,6 @@ import org.apache.flink.streaming.api.windowing.time.Time
 import org.apache.flink.streaming.api.functions.co.RichCoFlatMapFunction
 import java.util.Stack
 
-import com.voop.data.cleaning.logic.mars.mobile.page.MobilePageTraceProtos.MobilePageTrace
 import org.apache.flink.api.common.state.ValueStateDescriptor
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.streaming.api.windowing.assigners.EventTimeSessionWindows
@@ -46,6 +45,55 @@ class PVTrace {
   }
 }
 
+/** Reorder the events in one event-based window.
+  * After this operation, we can regard the messages under each key is sorted by event time. */
+class SortAndEmitFn extends WindowFunction[MobilePage, MobilePage, String, TimeWindow] {
+
+  override def apply(userId: String, window: TimeWindow,
+                     input: Iterable[MobilePage],
+                     out: Collector[MobilePage]): Unit = {
+    //    val pvList = input.filter(PVTimestampExactor.extractTimestamp(_) <= context.watermark)
+    val pvList = input
+    pvList.toList.sortBy(PVTimestampExactor.extractTimestamp)
+
+    pvList.foreach(pv => out.collect(pv))
+  }
+}
+
+/** Assign session info for each PV */
+class SessionFn extends RichCoFlatMapFunction[MobilePage, SessionHelper, MobilePageWithSession] {
+  private val serialVersionUID: Long = 1L
+  private val refPVSesionStateTI: TypeInformation[RefPVSesionState] = createTypeInformation[RefPVSesionState]
+  private val state: ValueStateDescriptor[RefPVSesionState] =
+    new ValueStateDescriptor[RefPVSesionState]("ref_page_state", refPVSesionStateTI, null)
+
+  override def flatMap2(in2: SessionHelper, collector: Collector[MobilePageWithSession]): Unit = {
+    val valueState = getRuntimeContext.getState(state)
+    //remove state
+    valueState.update(null)
+  }
+
+  override def flatMap1(pv: MobilePage, collector: Collector[MobilePageWithSession]): Unit = {
+    val valueState = getRuntimeContext.getState(state)
+    val stateOption = Option(valueState.value())
+    val curState = stateOption.getOrElse(RefPVSesionState(0, "", "", ""))
+    //assign ref_page_id related info
+    val pvTraceBuilder = MobilePageWithSession.newBuilder()
+    pvTraceBuilder.setPv(pv)
+
+    pvTraceBuilder.setIsLandingPage(stateOption.isEmpty)
+    pvTraceBuilder.setReferPageId(curState.refPageId)
+    pvTraceBuilder.setReferPageParam(curState.refPageParam)
+    pvTraceBuilder.setReferPageType(curState.refPageType)
+    pvTraceBuilder.setReferTabPageId(curState.refTabPageId)
+    collector.collect(pvTraceBuilder.build())
+
+    val newState = RefPVSesionState(pv.getPageId, pv.getPageType, pv.getPageParam, pv.getTabPageId)
+    valueState.update(newState)
+  }
+}
+
+/** Compute path info for each PV */
 class TraceFn extends RichCoFlatMapFunction[MobilePageWithSession, SessionHelper, TraceItem] {
   private val serialVersionUID: Long = 1L
   private val pvStateTI: TypeInformation[PVState] = createTypeInformation[PVState]
@@ -91,50 +139,6 @@ class TraceFn extends RichCoFlatMapFunction[MobilePageWithSession, SessionHelper
   }
 }
 
-class SessionFn extends RichCoFlatMapFunction[MobilePage, SessionHelper, MobilePageWithSession] {
-  private val serialVersionUID: Long = 1L
-  private val refPVSesionStateTI: TypeInformation[RefPVSesionState] = createTypeInformation[RefPVSesionState]
-  private val state: ValueStateDescriptor[RefPVSesionState] =
-    new ValueStateDescriptor[RefPVSesionState]("ref_page_state", refPVSesionStateTI, null)
-
-  override def flatMap2(in2: SessionHelper, collector: Collector[MobilePageWithSession]): Unit = {
-    val valueState = getRuntimeContext.getState(state)
-    //remove state
-    valueState.update(null)
-  }
-
-  override def flatMap1(pv: MobilePage, collector: Collector[MobilePageWithSession]): Unit = {
-    val valueState = getRuntimeContext.getState(state)
-    val stateOption = Option(valueState.value())
-    val curState = stateOption.getOrElse(RefPVSesionState(0, "", "", ""))
-    //assign ref_page_id related info
-    val pvTraceBuilder = MobilePageWithSession.newBuilder()
-    pvTraceBuilder.setPv(pv)
-
-    pvTraceBuilder.setIsLandingPage(stateOption.isEmpty)
-    pvTraceBuilder.setReferPageId(curState.refPageId)
-    pvTraceBuilder.setReferPageParam(curState.refPageParam)
-    pvTraceBuilder.setReferPageType(curState.refPageType)
-    pvTraceBuilder.setReferTabPageId(curState.refTabPageId)
-    collector.collect(pvTraceBuilder.build())
-
-    val newState = RefPVSesionState(pv.getPageId, pv.getPageType, pv.getPageParam, pv.getTabPageId)
-    valueState.update(newState)
-  }
-}
-
-class SortAndEmitFn extends WindowFunction[MobilePage, MobilePage, String, TimeWindow] {
-
-  override def apply(userId: String, window: TimeWindow,
-                      input: Iterable[MobilePage],
-                       out: Collector[MobilePage]): Unit = {
-//    val pvList = input.filter(PVTimestampExactor.extractTimestamp(_) <= context.watermark)
-    val pvList = input
-    pvList.toList.sortBy(PVTimestampExactor.extractTimestamp)
-
-    pvList.foreach(pv => out.collect(pv))
-  }
-}
 
 case class RefPVSesionState(refPageId: Long, refPageType: String, refPageParam: String, refTabPageId: String)
 

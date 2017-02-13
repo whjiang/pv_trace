@@ -1,6 +1,7 @@
 import java.util.Properties
 
 import com.voop.data.cleaning.logic.mars.mobile.page.MobilePageProtos.MobilePage
+import com.voop.data.cleaning.logic.mars.mobile.page.MobilePageSessionProtos.MobilePageWithSession
 import com.voop.data.cleaning.logic.mars.mobile.page.MobilePageTraceProtos.MobilePageTrace
 import org.apache.flink.streaming.api.scala._
 import org.apache.flink.streaming.api.TimeCharacteristic
@@ -56,18 +57,18 @@ object PVTraceMain {
 
     val pvTrace = new PVTrace()
     val sessionStream = pvTrace.genPVSession(inputStream)
-    val outputStream = pvTrace.genPVTrace(sessionStream)
+    //val outputStream = pvTrace.genPVTrace(sessionStream)
 
-    val kafkaSink = new FlinkKafkaProducer08[MobilePageTrace](
+    val kafkaSink = new FlinkKafkaProducer08[MobilePageWithSession](
       fullProp.getProperty("dest.bootstrap.servers"),      // Kafka broker host:port
       fullProp.getProperty("dest.topic_name"),       // Topic to write to
-      new MobilePageTraceSchema())
+      new MobilePageSessionSchema())
 
     // the following is necessary for at-least-once delivery guarantee
     kafkaSink.setLogFailuresOnly(false);   // "false" by default
     kafkaSink.setFlushOnCheckpoint(true);  // "false" by default
 
-    outputStream.addSink(kafkaSink)
+    sessionStream.addSink(kafkaSink)
 
     env.execute("PV_Trace")
   }
